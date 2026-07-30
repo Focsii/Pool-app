@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pool Admin</title>
+<style>
+  :root{
+    --bg:#0E1013; --panel:#161920; --panel-2:#1D212A; --line:#272C36;
+    --text:#E9E7E2; --muted:#8A8F9C; --accent:#C9A15A;
+    --pos:#5FBF8F; --neg:#E07A6B;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+  .wrap{max-width:520px; margin:0 auto; padding:20px 16px 60px;}
+  .ledger-mark{
+    display:inline-flex; align-items:center; gap:8px; margin-bottom:22px;
+  }
+  .ledger-mark .dot{width:9px; height:9px; border-radius:50%; background:var(--accent);}
+  .ledger-mark span{font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  h1{font-size:22px; margin:0 0 4px; font-weight:600; letter-spacing:-0.01em;}
+  .sub{color:var(--muted); font-size:14px; margin:0 0 28px;}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px; margin-bottom:16px;
+  }
+  label{display:block; font-size:12px; color:var(--muted); margin:0 0 6px; letter-spacing:.03em;}
+  input, select{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:9px; padding:11px 12px; font-size:15px; margin-bottom:14px;
+  }
+  input:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+  button{
+    width:100%; padding:12px; border-radius:9px; border:none; font-size:15px; font-weight:600;
+    cursor:pointer; letter-spacing:.01em;
+  }
+  .btn-primary{background:var(--accent); color:#1a1206;}
+  .btn-primary:active{opacity:.85;}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--text); width:auto; padding:8px 12px; font-weight:500; font-size:13px;}
+  .btn-danger{background:transparent; border:1px solid #4a2622; color:var(--neg); width:auto; padding:8px 12px; font-size:13px;}
+  .err{color:var(--neg); font-size:13px; margin:-6px 0 14px; min-height:1em;}
+  .toprow{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;}
+  .toprow h1{margin:0;}
+
+  .investor{border-bottom:1px solid var(--line); padding:14px 0;}
+  .investor:last-child{border-bottom:none;}
+  .irow{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .iname{font-size:15px; font-weight:600;}
+  .stamp{
+    font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:2px 7px;
+    border-radius:4px; border:1px solid; white-space:nowrap;
+  }
+  .stamp.active{color:var(--pos); border-color:#26402f;}
+  .stamp.suspended{color:var(--neg); border-color:#4a2622;}
+  .stamp.admin{color:var(--accent); border-color:#4a3a1e;}
+  .imeta{color:var(--muted); font-size:13px; margin-top:2px;}
+  .iedit{display:none; margin-top:12px;}
+  .iedit.open{display:block;}
+  .iedit-grid{display:grid; grid-template-columns:1fr 1fr; gap:0 12px;}
+  .iactions{display:flex; gap:8px; margin-top:16px; flex-wrap:wrap;}
+  .link-btn{background:none; border:none; color:var(--muted); font-size:13px; padding:0; width:auto; text-decoration:underline; text-underline-offset:2px;}
+
+  .section-label{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin:26px 0 10px;}
+  .empty{color:var(--muted); font-size:14px; padding:8px 0;}
+  #loginScreen, #dashScreen{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ledger-mark"><span class="dot"></span><span>Pool Ledger &middot; Admin</span></div>
+
+  <div id="loginScreen">
+    <h1>Sign in</h1>
+    <p class="sub">Private admin access only.</p>
+    <div class="card">
+      <label for="loginEmail">Email</label>
+      <input id="loginEmail" type="email" autocomplete="username">
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password">
+      <div class="err" id="loginErr"></div>
+      <button class="btn-primary" onclick="doLogin()">Sign in</button>
+    </div>
+  </div>
+
+  <div id="dashScreen">
+    <div class="toprow">
+      <div>
+        <h1>Investors</h1>
+        <p class="sub" id="whoami" style="margin:0;"></p>
+      </div>
+      <button class="btn-ghost" onclick="doLogout()">Sign out</button>
+    </div>
+
+    <div class="section-label">Add investor</div>
+    <div class="card">
+      <label for="newName">Name</label>
+      <input id="newName" type="text">
+      <label for="newEmail">Email</label>
+      <input id="newEmail" type="email">
+      <label for="newPassword">Temporary password</label>
+      <input id="newPassword" type="text">
+      <div class="iedit-grid">
+        <div>
+          <label for="newSplit">Split % (keeps)</label>
+          <input id="newSplit" type="number" step="0.01" value="100">
+        </div>
+        <div>
+          <label for="newCapital">Base capital</label>
+          <input id="newCapital" type="number" step="0.01" value="0">
+        </div>
+      </div>
+      <div class="err" id="addErr"></div>
+      <button class="btn-primary" onclick="addInvestor()">Add investor</button>
+    </div>
+
+    <div class="section-label">Everyone in the pool</div>
+    <div class="card" id="investorList"><div class="empty">Loading&hellip;</div></div>
+  </div>
+</div>
+
+<script>
+const API = '/.netlify/functions';
+let investors = [];
+
+async function api(path, opts){
+  const res = await fetch(API + path, { credentials: 'same-origin', headers: {'Content-Type':'application/json'}, ...opts });
+  let data = null;
+  try { data = await res.json(); } catch(e){}
+  if (!res.ok) throw new Error((data && data.error) || ('Request failed (' + res.status + ')'));
+  return data;
+}
+
+function fmtMoney(n){
+  const v = Number(n)||0;
+  return (v<0?'-$':'$') + Math.abs(v).toFixed(2);
+}
+
+async function checkSession(){
+  try {
+    const me = await api('/admin-me');
+    document.getElementById('whoami').textContent = me.name + ' (' + me.email + ')';
+    showDash();
+    loadInvestors();
+  } catch(e){
+    showLogin();
+  }
+}
+
+function showLogin(){
+  document.getElementById('loginScreen').style.display = 'block';
+  document.getElementById('dashScreen').style.display = 'none';
+}
+function showDash(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashScreen').style.display = 'block';
+}
+
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.textContent = '';
+  try {
+    const me = await api('/admin-login', { method:'POST', body: JSON.stringify({ email, password }) });
+    document.getElementById('whoami').textContent = me.name + ' (' + me.email + ')';
+    showDash();
+    loadInvestors();
+  } catch(e){
+    errEl.textContent = e.message;
+  }
+}
+
+async function doLogout(){
+  try { await api('/admin-logout', { method:'POST' }); } catch(e){}
+  showLogin();
+}
+
+async function loadInvestors(){
+  const listEl = document.getElementById('investorList');
+  try {
+    const data = await api('/admin-investors');
+    investors = data.investors;
+    renderInvestors();
+  } catch(e){
+    listEl.innerHTML = '<div class="empty">Could not load investors: ' + e.message + '</div>';
+  }
+}
+
+function renderInvestors(){
+  const listEl = document.getElementById('investorList');
+  if (investors.length === 0){
+    listEl.innerHTML = '<div class="empty">No investors yet.</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  investors.forEach(inv => {
+    const row = document.createElement('div');
+    row.className = 'investor';
+    const stampClass = inv.role === 'admin' ? 'admin' : (inv.status === 'active' ? 'active' : 'suspended');
+    const stampText = inv.role === 'admin' ? 'Admin' : inv.status;
+    row.innerHTML = `
+      <div class="irow">
+        <div>
+          <div class="iname">${escapeHtml(inv.name)}</div>
+          <div class="imeta">${escapeHtml(inv.email)}${inv.role !== 'admin' ? ' &middot; split ' + inv.split_pct + '% &middot; ' + fmtMoney(inv.base_capital) : ''}</div>
+        </div>
+        <span class="stamp ${stampClass}">${stampText}</span>
+      </div>
+      <button class="link-btn" style="margin-top:8px;" onclick="toggleEdit(${inv.id})">Edit</button>
+      <div class="iedit" id="edit-${inv.id}">
+        <div class="iedit-grid">
+          <div>
+            <label>Name</label>
+            <input id="name-${inv.id}" type="text" value="${escapeHtml(inv.name)}">
+          </div>
+          <div>
+            <label>Split % (keeps)</label>
+            <input id="split-${inv.id}" type="number" step="0.01" value="${inv.split_pct}" ${inv.role==='admin'?'disabled':''}>
+          </div>
+        </div>
+        <div class="iedit-grid">
+          <div>
+            <label>Base capital</label>
+            <input id="capital-${inv.id}" type="number" step="0.01" value="${inv.base_capital}" ${inv.role==='admin'?'disabled':''}>
+          </div>
+          <div>
+            <label>New password (optional)</label>
+            <input id="pass-${inv.id}" type="text" placeholder="leave blank to keep">
+          </div>
+        </div>
+        <div class="err" id="editErr-${inv.id}"></div>
+        <div class="iactions">
+          <button class="btn-ghost" onclick="saveInvestor(${inv.id})">Save changes</button>
+          ${inv.role !== 'admin' ? `<button class="btn-ghost" onclick="toggleSuspend(${inv.id}, '${inv.status}')">${inv.status==='active'?'Suspend':'Reactivate'}</button>` : ''}
+          ${inv.role !== 'admin' ? `<button class="btn-danger" onclick="deleteInvestor(${inv.id})">Remove</button>` : ''}
+        </div>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+}
+
+function toggleEdit(id){
+  document.getElementById('edit-' + id).classList.toggle('open');
+}
+
+async function saveInvestor(id){
+  const errEl = document.getElementById('editErr-' + id);
+  errEl.textContent = '';
+  const name = document.getElementById('name-' + id).value.trim();
+  const splitEl = document.getElementById('split-' + id);
+  const capitalEl = document.getElementById('capital-' + id);
+  const password = document.getElementById('pass-' + id).value.trim();
+  const payload = { id, name };
+  if (!splitEl.disabled) payload.splitPct = parseFloat(splitEl.value) || 0;
+  if (!capitalEl.disabled) payload.baseCapital = parseFloat(capitalEl.value) || 0;
+  if (password) payload.password = password;
+  try {
+    await api('/admin-investors', { method:'PATCH', body: JSON.stringify(payload) });
+    await loadInvestors();
+  } catch(e){
+    errEl.textContent = e.message;
+  }
+}
+
+async function toggleSuspend(id, currentStatus){
+  const next = currentStatus === 'active' ? 'suspended' : 'active';
+  try {
+    await api('/admin-investors', { method:'PATCH', body: JSON.stringify({ id, status: next }) });
+    await loadInvestors();
+  } catch(e){ alert(e.message); }
+}
+
+async function deleteInvestor(id){
+  if (!confirm('Remove this investor? This cannot be undone.')) return;
+  try {
+    await api('/admin-investors', { method:'DELETE', body: JSON.stringify({ id }) });
+    await loadInvestors();
+  } catch(e){ alert(e.message); }
+}
+
+async function addInvestor(){
+  const errEl = document.getElementById('addErr');
+  errEl.textContent = '';
+  const name = document.getElementById('newName').value.trim();
+  const email = document.getElementById('newEmail').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const splitPct = parseFloat(document.getElementById('newSplit').value) || 0;
+  const baseCapital = parseFloat(document.getElementById('newCapital').value) || 0;
+  if (!name || !email || !password){ errEl.textContent = 'Name, email, and a temporary password are required.'; return; }
+  try {
+    await api('/admin-investors', { method:'POST', body: JSON.stringify({ name, email, password, splitPct, baseCapital }) });
+    document.getElementById('newName').value = '';
+    document.getElementById('newEmail').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newSplit').value = 100;
+    document.getElementById('newCapital').value = 0;
+    await loadInvestors();
+  } catch(e){
+    errEl.textContent = e.message;
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+checkSession();
+</script>
+</body>
+</html>
