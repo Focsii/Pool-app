@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@netlify/neon": "^1.0.0",
+    "@netlify/neon": "^0.1.2",
     "bcryptjs": "^2.4.3"
   }
 }
