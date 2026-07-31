@@ -1263,7 +1263,14 @@
     if (entries.length === 0) return;
     const first = entries[0];
     const last = entries[entries.length - 1];
-    const totalPnl = entries.reduce((sum, e) => sum + (typeof e.delta === 'number' ? e.delta : (e.curr - e.prev - (e.deposits||0))), 0);
+    // Derive P&L directly from the starting/ending balance actually shown on
+    // the card (minus deposits across the month) — the same identity the
+    // weekly card uses. Summing each week's individual delta could silently
+    // drift from (ending - starting) whenever two saved weeks don't chain
+    // perfectly (e.g. a balance was typed in that didn't match the prior
+    // week's ending figure), which is what caused the mismatch.
+    const totalDeposits = entries.reduce((sum, e) => sum + (e.deposits || 0), 0);
+    const totalPnl = (last.curr - first.prev) - totalDeposits;
     const pct = first.prev !== 0 ? (totalPnl / first.prev) * 100 : 0;
 
     setCardCommon(s.name, 'Monthly Statement', monthLabel(ym), 'Starting Balance', 'Ending Balance', first.prev, last.curr, totalPnl, pct);
