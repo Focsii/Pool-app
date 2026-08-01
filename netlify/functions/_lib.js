@@ -1,10 +1,9 @@
-const { neon } = require('@netlify/neon');
+const { getDatabase } = require('@netlify/database');
 const crypto = require('crypto');
 
-const sql = neon(); // uses NETLIFY_DATABASE_URL automatically
+const sql = getDatabase(); // connection is injected automatically by Netlifyfunction json(status, body, extraHeaders) {
 
-function json(status, body, extraHeaders) {
-  return {
+return {
     statusCode: status,
     headers: { 'Content-Type': 'application/json', ...(extraHeaders || {}) },
     body: JSON.stringify(body)
