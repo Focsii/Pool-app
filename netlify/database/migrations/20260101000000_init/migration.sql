@@ -1,0 +1,50 @@
+CREATE TABLE IF NOT EXISTS investors (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'client',
+  status TEXT NOT NULL DEFAULT 'active',
+  split_pct NUMERIC NOT NULL DEFAULT 100,
+  base_capital NUMERIC NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS weeks (
+  id SERIAL PRIMARY KEY,
+  week_label TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  publish_at TIMESTAMPTZ,
+  released_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS balances (
+  id SERIAL PRIMARY KEY,
+  week_id INTEGER NOT NULL REFERENCES weeks(id) ON DELETE CASCADE,
+  investor_id INTEGER NOT NULL REFERENCES investors(id) ON DELETE CASCADE,
+  prev_balance NUMERIC NOT NULL DEFAULT 0,
+  deposit NUMERIC NOT NULL DEFAULT 0,
+  withdrawal NUMERIC NOT NULL DEFAULT 0,
+  pnl NUMERIC NOT NULL DEFAULT 0,
+  curr_balance NUMERIC NOT NULL DEFAULT 0,
+  UNIQUE(week_id, investor_id)
+);
+
+CREATE TABLE IF NOT EXISTS requests (
+  id SERIAL PRIMARY KEY,
+  investor_id INTEGER NOT NULL REFERENCES investors(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  investor_id INTEGER NOT NULL REFERENCES investors(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
